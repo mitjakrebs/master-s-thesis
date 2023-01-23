@@ -25,7 +25,23 @@ lemma mem_VI:
   using assms
   by (force simp add: V_def endpoints_def)+
 
-lemma
+lemma mem_VI_2:
+  assumes "{u, v} \<in> endpoints ` G"
+  shows
+    "u \<in> V G"
+    "v \<in> V G"
+  using assms
+  by (auto simp add: mem_endpoints_iff dest: mem_VI)
+
+lemma mem_VE:
+  assumes "v \<in> V G"
+  obtains e where
+    "e \<in> G"
+    "v \<in> endpoints e"
+  using assms
+  by (auto simp add: V_def endpoints_def)
+
+lemma V_subset:
   assumes "G \<subseteq> G'"
   shows "V G \<subseteq> V G'"
   using assms
@@ -33,6 +49,9 @@ lemma
 
 definition is_multiple_edge :: "('a, 'b) multigraph \<Rightarrow> 'b set \<Rightarrow> bool" where
   "is_multiple_edge G vs \<equiv> \<exists>\<epsilon> \<epsilon>'. \<epsilon> \<noteq> \<epsilon>' \<and> (\<epsilon>, vs) \<in> G \<and> (\<epsilon>', vs) \<in> G"
+
+definition simple :: "('a, 'b) multigraph \<Rightarrow> bool" where
+  "simple G \<equiv> \<forall>vs. \<not> is_multiple_edge G vs"
 
 (* TODO: Rename. *)
 locale other =
@@ -72,6 +91,21 @@ proof -
     by (fastforce dest: other that)
 qed
 
+lemma (in multigraph) mem_VE:
+  assumes "u \<in> V G"
+  obtains v where
+    "{u, v} \<in> endpoints ` G"
+proof -
+  obtain e where
+    "e \<in> G"
+    "u \<in> endpoints e"
+    using assms
+    by (elim mem_VE)
+  thus ?thesis
+    using assms
+    by (blast dest: other intro: that)
+qed
+
 locale finite_multigraph = multigraph +
   assumes finite_edges: "finite G"
 
@@ -84,11 +118,51 @@ lemma (in finite_multigraph) finite_vertices:
 definition idk :: "('a, 'b) multigraph \<Rightarrow> 'b set \<Rightarrow> 'b set \<Rightarrow> ('a, 'b) multigraph" where
   "idk G X Y \<equiv> {e \<in> G. endpoints e \<subseteq> X \<union> Y \<and> endpoints e \<inter> X \<noteq> {} \<and> endpoints e \<inter> Y \<noteq> {}}"
 
+lemma mem_idkD:
+  assumes "e \<in> idk G X Y"
+  shows
+    "e \<in> G"
+    "endpoints e \<subseteq> X \<union> Y"
+    "endpoints e \<inter> X \<noteq> {}"
+    "endpoints e \<inter> Y \<noteq> {}"
+  using assms
+  by (simp_all add: idk_def)
+
+lemma idk_subset:
+  shows "idk G X Y \<subseteq> G"
+  by (simp add: idk_def)
+
 definition idk_2 :: "('a, 'b) multigraph \<Rightarrow> 'b set \<Rightarrow> ('a, 'b) multigraph" where
   "idk_2 G X \<equiv> idk G X X"
 
+lemma mem_idk_2D:
+  assumes "e \<in> idk_2 G X"
+  shows "endpoints e \<subseteq> X"
+  using assms
+  by (auto simp add: idk_2_def dest: mem_idkD(2))
+
+lemma mem_endpoints_idk_2D:
+  assumes "{u, v} \<in> endpoints ` idk_2 G X"
+  shows
+    "u \<in> X"
+    "v \<in> X"
+  using assms
+  by (blast dest: mem_idk_2D)+
+
+lemma idk_2_subset:
+  shows "idk_2 G X \<subseteq> G"
+  unfolding idk_2_def
+  using idk_subset
+  .
+
 definition idk_3 :: "('a, 'b) multigraph \<Rightarrow> 'b set \<Rightarrow> ('a, 'b) multigraph" where
   "idk_3 G \<equiv> idk G (V G)"
+
+lemma idk_3_subset:
+  shows "idk_3 G X \<subseteq> G"
+  unfolding idk_3_def
+  using idk_subset
+  .
 
 lemma mem_endpoints_idk_3I:
   assumes "x \<in> X"
@@ -99,6 +173,11 @@ lemma mem_endpoints_idk_3I:
 
 definition idk_4 :: "('a, 'b) multigraph \<Rightarrow> 'b set \<Rightarrow> ('a, 'b) multigraph" where
   "idk_4 G X \<equiv> G - idk_3 G X"
+
+lemma idk_4_subset:
+  shows "idk_4 G X \<subseteq> G"
+  using idk_3_subset
+  by (simp add: idk_4_def)
 
 lemma V_idk_4_subset:
   shows "V (idk_4 G X) \<subseteq> V G - X"
@@ -165,5 +244,21 @@ lemma mem_endpoints_EI:
   shows "{x, y} \<in> endpoints ` E G X"
   using assms
   sorry
+
+lemma (in multigraph) mem_V_EE:
+  assumes "x \<in> V (E G X)"
+  assumes "x \<notin> X"
+  obtains y where
+    "{x, y} \<in> endpoints ` E G X"
+    "y \<in> X"
+  sorry
+
+lemma mem_V_EI:
+  assumes "u \<in> X"
+  assumes "{u, v} \<in> endpoints ` G"
+  shows "v \<in> V (E G X)"
+  using assms
+  unfolding V_def
+  by (fast intro: mem_endpoints_EI)
 
 end

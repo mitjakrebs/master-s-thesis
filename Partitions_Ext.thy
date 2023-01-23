@@ -21,4 +21,18 @@ lemma
   by (auto simp add: is_partition_of_def is_partition_def is_partition_generalization_of_def)
 *)
 
+lemma is_partition_of_imp_pairwise_disjnt:
+  assumes "\<C> partitions A"
+  shows "pairwise disjnt \<C>"
+  using assms
+  unfolding is_partition_of_def is_non_overlapping_def pairwise_def disjnt_def
+  by meson
+
+lemma is_partition_of_imp_card_eq:
+  assumes "Ball \<C> finite"
+  assumes "\<C> partitions A"
+  shows "sum card \<C> = card A"
+  using assms card_Union_disjoint
+  by (fastforce simp add: is_partition_of_def intro: is_partition_of_imp_pairwise_disjnt)
+
 end

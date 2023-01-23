@@ -1,6 +1,7 @@
 theory Directed_Walk
   imports
     Directed_Multigraph
+    Graph_Theory.Rtrancl_On
 begin
 
 type_synonym ('a, 'b) walk = "('a, 'b) edge list"
@@ -70,6 +71,12 @@ lemma walk_vertices_cong_2:
   using assms
   by (induct p arbitrary: u) (auto simp add: walk_iff)
 
+lemma dinstinct_walk_vertices_imp_distinct:
+  assumes "distinct (walk_vertices p u)"
+  shows "distinct p"
+  using assms
+  by (cases p) (auto simp add: walk_vertices_cong distinct_map)
+
 definition hd_vertex :: "('a, 'b) walk \<Rightarrow> 'b \<Rightarrow> 'b" where
   "hd_vertex p v \<equiv> hd (walk_vertices p v)"
 
@@ -123,11 +130,61 @@ lemma walk_snocD:
   using assms
   by (simp_all add: walk_snoc_iff)
 
+(* TODO: Beautify. *)
 lemma walk_vertices_snoc:
   assumes "walk G (es @ [e]) u v"
-  shows "walk_vertices (es @ [e]) u = walk_vertices es (tail e) @ [head e]"
+  shows "walk_vertices (es @ [e]) x = walk_vertices es (tail e) @ [head e]"
   using assms
-  sledgehammer
   by (metis (no_types, lifting) append_self_conv2 last_vertex_def last_vertex_eq list.simps(9) map_append snoc_eq_iff_butlast walk_snoc_iff walk_vertices_cong)
+
+definition reachable :: "('a, 'b) multigraph \<Rightarrow> 'b \<Rightarrow> 'b \<Rightarrow> bool" where
+  "reachable G u v \<equiv> (u, v) \<in> rtrancl_on (V G) (endpoints ` G)"
+
+lemma reachableE:
+  assumes "reachable G u v"
+  obtains p where
+    "walk G p u v"
+  using assms
+  unfolding reachable_def
+proof (induct rule: rtrancl_on.induct)
+  case (rtrancl_on_refl v)
+  thus ?case
+    by (fast intro: walk_Nil)
+next
+  case (rtrancl_on_into_rtrancl_on u v w)
+  thus ?case
+    using walk_append_iff walk_singleton_iff last_vertex_eq
+    by fastforce
+qed
+
+lemma reachableI:
+  assumes "walk G p u v"
+  shows "reachable G u v"
+  using assms
+  unfolding reachable_def
+proof (induct arbitrary: v rule: rev_induct)
+  case Nil
+  thus ?case
+    by (simp add: walk_Nil_iff)
+next
+  case (snoc e es)
+  show ?case
+  proof (rule rtrancl_on_into_rtrancl_on[where ?b = "tail e"], goal_cases)
+    case 1
+    show ?case
+      using snoc.prems
+      by (auto simp add: walk_snoc_iff intro: snoc.hyps)
+  next
+    case 2
+    thus ?case
+      using snoc.prems
+      by (auto simp add: walk_snoc_iff dest: mem_ED)
+  next
+    case 3
+    then show ?case
+      using snoc.prems
+      by (fast dest: last_vertex_mem_V)
+  qed
+qed
 
 end

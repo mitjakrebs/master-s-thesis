@@ -89,8 +89,24 @@ lemma (in other) connected_components_disjoint:
   sorry
 
 definition (in other) connected' :: "('a, 'b) multigraph \<Rightarrow> 'b set \<Rightarrow> bool" where
-  "connected' G X \<equiv> X \<noteq> {} \<and> (\<forall>u v. u \<in> X \<and> v \<in> X \<longrightarrow> reachable (idk_2 G X) u v)"
+  "connected' G X \<equiv> X \<subseteq> V G \<and> (\<forall>u v. u \<in> X \<and> v \<in> X \<and> v \<noteq> u \<longrightarrow> reachable (idk_2 G X) u v)"
 
+lemma (in other) connected'_empty:
+  shows "connected' G {}"
+  by (simp add: connected'_def)
+
+lemma (in other) connected'_singleton:
+  assumes "v \<in> V G"
+  shows "connected' G {v}"
+  using assms
+  by (simp add: connected'_def)
+
+(*
+definition (in other) connected' :: "('a, 'b) multigraph \<Rightarrow> 'b set \<Rightarrow> bool" where
+  "connected' G X \<equiv> X \<noteq> {} \<and> (\<forall>u v. u \<in> X \<and> v \<in> X \<longrightarrow> reachable (idk_2 G X) u v)"
+*)
+
+(*
 lemma (in other) connected'D:
   assumes "connected' G X"
   shows
@@ -98,13 +114,16 @@ lemma (in other) connected'D:
     "\<forall>u v. u \<in> X \<and> v \<in> X \<longrightarrow> reachable (idk_2 G X) u v"
   using assms
   by (simp_all add: connected'_def)
+*)
 
+(*
 lemma (in other) connected'I:
   assumes "X \<noteq> {}"
   assumes "\<forall>u v. u \<in> X \<and> v \<in> X \<longrightarrow> reachable (idk_2 G X) u v"
   shows "connected' G X"
   using assms
   by (simp add: connected'_def)
+*)
 
 lemma (in other) connected'_subset_connected_component:
   assumes "connected' G X"
@@ -145,17 +164,30 @@ lemma (in other) connected'_1:
   sorry
 
 (* QUESTION: Generalize to arbitrary walks? *)
-(* QUESTION: Can we get rid of the non-empty assumptions? *)
+(*
 lemma (in other) connected'_not_connected_componentE:
   assumes "connected' G X"
   assumes "X \<notin> connected_components G"
   obtains x y where
     "x \<in> X"
-    (* "y \<in> connected_component G x" *)
+    "{x, y} \<in> endpoints ` idk_2 G (connected_component G x)"
+    "y \<in> connected_component G x"
+    "y \<notin> X"
+  sorry
+*)
+
+(*
+lemma (in other) connected'_not_connected_componentE_2:
+  assumes "connected' G X"
+  assumes "X \<notin> connected_components G"
+  obtains x y where
+    "x \<in> X"
+    "{x, y} \<in> endpoints ` G"
     "y \<in> V G"
     "y \<notin> X"
-    "{x, y} \<in> endpoints ` G"
-  sorry
+  using assms idk_2_subset connected_component_subset
+  by (blast elim: connected'_not_connected_componentE)
+*)
 
 lemma (in other) connected_component_10:
   assumes "C \<in> connected_components (idk_4 G X)"
@@ -227,5 +259,20 @@ proof -
         dest: connected_components_disjoint
         intro: connected_component_refl)
 qed
+
+lemma (in other) connected_component_72:
+  assumes "C \<in> connected_components G"
+  assumes "u \<in> C"
+  assumes "v \<in> C"
+  obtains p where
+    "walk (idk_2 G C) p u v"
+  sorry
+
+lemma (in other) connected'_supergraph:
+  assumes "G \<subseteq> G'"
+  assumes "connected' G X"
+  shows "connected' G' X"
+  using assms
+  sorry
 
 end
